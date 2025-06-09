@@ -1,0 +1,122 @@
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+    overflow: hidden;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #fff;
+}
+/* Estrellas */
+.star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    opacity: 0.8;
+    animation: twinkle 2s infinite alternate;
+}
+@keyframes twinkle {
+    to { opacity: 0.3; }
+}
+
+.stars-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+    display: block;
+}
+
+#falcon3d {
+    position: relative;
+    z-index: 1;
+}
+/* Planeta */
+.planet {
+    position: absolute;
+    left: 80%;
+    top: 70%;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle at 30% 30%, #6ec6ff 60%, #1565c0 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 60px 10px #6ec6ff88;
+}
+/* Nave espacial */
+.spaceship {
+    position: absolute;
+    left: 10%;
+    top: 20%;
+    width: 80px;
+    height: 80px;
+    z-index: 2;
+}
+/* Formulario */
+.login-container {
+    position: relative;
+    z-index: 10;
+    background: rgba(30, 34, 54, 0.95);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px 0 #000a 0.2;
+    width: 350px;
+    margin: 100px auto;
+    padding: 40px 30px 30px 30px;
+    text-align: center;
+    border: 1px solid #3a3f5a;
+}
+
+.login-container h2 {
+    margin-bottom: 30px;
+    letter-spacing: 2px;
+    color: #90caf9;
+    text-shadow: 0 0 8px #42a5f5;
+}
+
+.login-container label {
+    display: block;
+    margin-bottom: 8px;
+    color: #b3e5fc;
+    text-align: left;
+}
+
+.login-container input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 18px;
+    border: 2px solid #42a5f5;
+    border-radius: 8px;
+    background: #23294a;
+    color: #fff;
+    font-size: 1em;
+    box-shadow: 0 2px 8px #0003;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login-container input:focus {
+    border-color: #ffeb3b;
+    box-shadow: 0 0 0 3px #ffeb3b55;
+    background: #263159;
+}
+
+.login-container button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #42a5f5 0%, #7e57c2 100%);
+    color: #fff;
+    font-size: 1.1em;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px #42a5f555;
+    transition: background 0.3s;
+}
+
+.login-container button:hover {
+    background: linear-gradient(90deg, #7e57c2 0%, #42a5f5 100%);
+}
