@@ -1,4 +1,4 @@
-package com.futureprograms.NexusAPI.interfaces.primary;
+package com.futureprograms.NexusAPI.interfaces;
 
 import com.futureprograms.NexusAPI.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
