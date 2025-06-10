@@ -18,7 +18,7 @@ public class Favorite {
     private Integer constellationId;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "id", insertable = false, updatable = false)
+    @JoinColumn(name = "UserId", referencedColumnName = "Id", insertable = false, updatable = false)
     @JsonIgnore
     private User user;
 }

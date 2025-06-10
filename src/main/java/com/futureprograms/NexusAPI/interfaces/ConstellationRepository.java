@@ -1,4 +1,11 @@
 package com.futureprograms.NexusAPI.interfaces;
 
-public interface ConstellationRepository {
+import com.futureprograms.NexusAPI.model.Constellation;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
+import java.util.List;
+
+public interface ConstellationRepository extends JpaRepository<Constellation, Integer> {
+    Optional<Constellation> findById(Integer id);
+    List<Constellation> findByIdIn(List<Integer> ids);
 }
