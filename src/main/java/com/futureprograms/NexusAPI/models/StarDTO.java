@@ -1,4 +1,4 @@
-package com.futureprograms.NexusAPI.model;
+package com.futureprograms.NexusAPI.models;
 
 import lombok.Data;
 

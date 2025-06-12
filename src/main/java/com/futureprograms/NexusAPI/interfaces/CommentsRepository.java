@@ -1,6 +1,6 @@
 package com.futureprograms.NexusAPI.interfaces;
 
-import com.futureprograms.NexusAPI.model.Comment;
+import com.futureprograms.NexusAPI.models.Comment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 

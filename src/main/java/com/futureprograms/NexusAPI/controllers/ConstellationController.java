@@ -1,9 +1,9 @@
 package com.futureprograms.NexusAPI.controllers;
 
-import com.futureprograms.NexusAPI.model.Constellation;
+import com.futureprograms.NexusAPI.models.Constellation;
 import com.futureprograms.NexusAPI.interfaces.ConstellationRepository;
-import com.futureprograms.NexusAPI.model.Star;
-import com.futureprograms.NexusAPI.model.StarDTO;
+import com.futureprograms.NexusAPI.models.Star;
+import com.futureprograms.NexusAPI.models.StarDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -71,8 +71,7 @@ public class ConstellationController {
 
 
         // Si solo necesitas los datos actuales de Star:
-        // return ResponseEntity.ok(dtoList);
-        return ResponseEntity.ok(stars.size());
+        return ResponseEntity.ok(dtoList);
 
     }
 

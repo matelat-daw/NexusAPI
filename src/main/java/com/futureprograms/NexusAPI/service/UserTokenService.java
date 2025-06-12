@@ -1,6 +1,6 @@
 package com.futureprograms.NexusAPI.service;
 
-import com.futureprograms.NexusAPI.model.User;
+import com.futureprograms.NexusAPI.models.User;
 import com.futureprograms.NexusAPI.interfaces.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -14,28 +14,17 @@ import java.util.Arrays;
 public class UserTokenService {
 
     private final UserRepository userRepository;
-    private final String jwtSecret; // Cambia esto por tu clave secreta
+    private final JwtService jwtService; // Inyecta JwtService
 
-    public UserTokenService(UserRepository userRepository, @Value("${jwt.secret}") String jwtSecret) {
+    public UserTokenService(UserRepository userRepository, JwtService jwtService) {
         this.userRepository = userRepository;
-        this.jwtSecret = jwtSecret;
+        this.jwtService = jwtService;
     }
 
-    public User getUserFromToken(HttpServletRequest request) {
-        String token = getTokenFromCookie(request, "jwt");
-        if (token == null) return null;
-
-        try {
-            Claims claims = Jwts.parser()
-                    .setSigningKey(jwtSecret.getBytes())
-                    .parseClaimsJws(token)
-                    .getBody();
-
-            String userId = claims.getSubject();
-            return userRepository.findById(userId).orElse(null);
-        } catch (Exception e) {
-            return null;
-        }
+    public User getUserFromToken(String token) {
+        String userId = jwtService.getUserId(token);
+        if (userId == null) return null;
+        return userRepository.findById(userId).orElse(null);
     }
 
     private String getTokenFromCookie(HttpServletRequest request, String cookieName) {

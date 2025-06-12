@@ -1,50 +1,50 @@
 package com.futureprograms.NexusAPI.controllers;
 
-import com.futureprograms.NexusAPI.interfaces.RoleRepository;
-import com.futureprograms.NexusAPI.interfaces.UserRepository;
-import com.futureprograms.NexusAPI.model.*;
+import com.futureprograms.NexusAPI.interfaces.*;
+import com.futureprograms.NexusAPI.models.*;
 import com.futureprograms.NexusAPI.security.AspNetIdentityPasswordVerifier;
 import com.futureprograms.NexusAPI.service.JwtService;
 import com.futureprograms.NexusAPI.service.EmailSenderService;
-import com.futureprograms.NexusAPI.model.EmailConfirmation;
-import com.futureprograms.NexusAPI.interfaces.EmailConfirmationRepository;
+import com.futureprograms.NexusAPI.models.EmailConfirmation;
 import com.futureprograms.NexusAPI.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.futureprograms.NexusAPI.service.UserTokenService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import java.time.LocalDate;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.*;
-
-import static com.futureprograms.NexusAPI.security.AspNetIdentityPasswordVerifier.hashPassword;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class UserController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final ConstellationRepository constellationRepository;
+    private final CommentsRepository commentsRepository;
     private final UserService userService;
+    private final UserTokenService userTokenService;
     private final JwtService jwtService;
     private final EmailSenderService emailSender;
     private final EmailConfirmationRepository emailConfirmationRepository;
 
-    @Autowired
-    public UserController(UserRepository userRepository, RoleRepository roleRepository, JwtService jwtService, EmailSenderService emailSender, UserService userService, EmailConfirmationRepository emailConfirmationRepository) {
-        this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
-        this.userService = userService;
-        this.jwtService = jwtService;
-        this.emailSender = emailSender;
-        this.emailConfirmationRepository = emailConfirmationRepository;
-    }
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     @PostMapping(value = "/Auth/Register", consumes = {"multipart/form-data"})
-    public ResponseEntity<?> register(@ModelAttribute RegisterRequest model) {
+    public ResponseEntity<?> register(@Valid @ModelAttribute RegisterRequest model) {
         if (userRepository.existsByNick(model.getNick())) {
             return ResponseEntity.badRequest().body(Map.of("error", "Nick ya registrado"));
         }
@@ -53,34 +53,7 @@ public class UserController {
         }
 
         try {
-            String profileImagePath = "";
-            boolean profile = false;
-
-            User user = new User();
-            user.setId(UUID.randomUUID().toString());
-            user.setNick(model.getNick());
-            user.setName(model.getName());
-            user.setSurname1(model.getSurname1());
-            user.setSurname2(nullIfEmpty(model.getSurname2()));
-            user.setUserName(model.getEmail());
-            user.setEmail(model.getEmail());
-            user.setPhone(nullIfEmpty(model.getPhoneNumber()));
-            user.setProfileImage(profileImagePath);
-            user.setBday(model.getBday() != null ? model.getBday() : LocalDate.now());
-            user.setAbout(nullIfEmpty(model.getAbout()));
-            user.setUserLocation(nullIfEmpty(model.getUserLocation()));
-            user.setPublicProfile(profile);
-            user.setEmailConfirmed(false);
-
-            try {
-                user.setPassword(hashPassword(model.getPassword()));
-            } catch (Exception e) {
-                throw new RuntimeException("ERROR: No se pudo procesar la contraseña.");
-            }
-            Role basicRole = roleRepository.findByName("Basic");
-            Set<Role> roles = new HashSet<>();
-            roles.add(basicRole);
-            user.setRoles(roles);
+            User user = userService.createUserFromRegisterRequest(model);
             userService.register(user);
 
             String token = java.util.UUID.randomUUID().toString();
@@ -89,37 +62,19 @@ public class UserController {
             confirmationToken.setUser(user);
             confirmationToken.setExpiryDate(LocalDateTime.now().plusDays(1));
             emailConfirmationRepository.save(confirmationToken);
-            String confirmationLink = "http://localhost:8080/api/Auth/ConfirmEmail?userId=" + user.getId() + "&token=" + token;
-
-            String emailBody = """
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
-            <h2>Bienvenido a NexusAPI, %s!</h2>
-            <p>Gracias por registrarte. Para activar tu cuenta, por favor haz clic en el siguiente enlace:</p>
-            <p><a href="%s" style="padding: 10px 15px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 4px;">Confirmar mi cuenta</a></p>
-            <p>El enlace expirará en 24 horas.</p>
-            <p>Si no has creado esta cuenta, puedes ignorar este mensaje.</p>
-            <p>Saludos,<br>El equipo de Nexus Astralis</p>
-        </body>
-        </html>
-    """.formatted(user.getName(), confirmationLink);
+            String emailBody = buildConfirmationEmail(user, token);
 
             emailSender.sendEmail(user.getEmail(), "Confirma tu registro en NexusAPI", emailBody);
 
             return ResponseEntity.ok("Confirma tu Registro.");
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error al registrar usuario", e);
             return ResponseEntity.status(500).body("Error al registrar usuario: " + e.getMessage());
         }
     }
 
-    private String nullIfEmpty(String value) {
-        return (value == null || value.isEmpty()) ? null : value;
-    }
-
     @GetMapping("/Auth/ConfirmEmail")
     public ResponseEntity<?> confirmEmail(@RequestParam("userId") String userId, @RequestParam("token") String token) {
-        // Buscar el usuario
         Optional<User> userOptional = userRepository.findById(userId);
         if (userOptional.isEmpty()) {
             return ResponseEntity.badRequest().body("Usuario no encontrado");
@@ -127,47 +82,63 @@ public class UserController {
 
         User user = userOptional.get();
 
-        // Buscar el token
         EmailConfirmation confirmation = emailConfirmationRepository.findByToken(token);
-        if (confirmation == null) {
+        if (confirmation == null || !confirmation.getUser().getId().equals(userId)) {
             return ResponseEntity.badRequest().body("Token inválido");
         }
 
-        // Verificar que el token corresponde al usuario
-        if (!confirmation.getUser().getId().equals(userId)) {
-            return ResponseEntity.badRequest().body("El token no corresponde a este usuario");
-        }
-
-        // Verificar que el token no ha expirado
         if (confirmation.getExpiryDate().isBefore(LocalDateTime.now())) {
             emailConfirmationRepository.delete(confirmation);
             return ResponseEntity.badRequest().body("El token ha expirado");
         }
 
-        // Actualizar el usuario y guardar
         user.setEmailConfirmed(true);
         userRepository.save(user);
-
-        // Eliminar el token usado
         emailConfirmationRepository.delete(confirmation);
 
         return ResponseEntity.ok("¡Email confirmado correctamente! Ya puedes iniciar sesión.");
     }
 
-    @PutMapping("/Account/Update")
-    public ResponseEntity<?> update(@AuthenticationPrincipal UserDetails userDetails, @RequestBody RegisterRequest req) {
-        User user = userRepository.findByEmail(userDetails.getUsername());
+    @PatchMapping("/Account/Update")
+    public ResponseEntity<?> update(@Valid @ModelAttribute RegisterRequest req, @CookieValue("token") String token) {
+        User user = userTokenService.getUserFromToken(token);
         if (user == null) {
             return ResponseEntity.status(404).body(Map.of("error", "Usuario no encontrado"));
+        }
+
+        if (req.getNick() != null && !req.getNick().equals(user.getNick())) {
+            if (userRepository.existsByNick(req.getNick())) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Nick ya registrado"));
+            }
+            user.setNick(req.getNick());
+        }
+        if (req.getEmail() != null && !req.getEmail().equals(user.getEmail())) {
+            if (userRepository.findByEmail(req.getEmail()) != null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Email ya registrado"));
+            }
+            user.setEmail(req.getEmail());
         }
 
         if (req.getName() != null) user.setName(req.getName());
         if (req.getSurname1() != null) user.setSurname1(req.getSurname1());
         if (req.getSurname2() != null) user.setSurname2(req.getSurname2());
         if (req.getPhoneNumber() != null) user.setPhone(req.getPhoneNumber());
-        if (req.getBday() != null) user.setBday(req.getBday());
+        if (req.getBday() != null) {
+            try {
+                user.setBday(LocalDate.parse(req.getBday().toString())); // espera formato yyyy-MM-dd
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Formato de fecha inválido (usa yyyy-MM-dd)"));
+            }
+        }
         if (req.getUserLocation() != null) user.setUserLocation(req.getUserLocation());
-        if (req.getProfileImage() != null) user.setProfileImage(null);
+        if (req.getProfileImage() != null && !req.getProfileImage().isEmpty()) {
+            try {
+                String imagePath = saveProfileImage(req.getProfileImage(), user.getNick());
+                user.setProfileImage(imagePath);
+            } catch (IOException e) {
+                return ResponseEntity.status(500).body(Map.of("error", "Error al guardar la imagen de perfil"));
+            }
+        }
         if (req.getPublicProfile() != null)
             user.setPublicProfile("1".equals(req.getPublicProfile()));
         if (req.getAbout() != null) user.setAbout(req.getAbout());
@@ -185,22 +156,14 @@ public class UserController {
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest, HttpServletResponse response) {
         User user = userRepository.findByEmail(loginRequest.getEmail());
         if (user == null) {
-            System.out.println("Usuario no encontrado en la base de datos");
+            logger.warn("Usuario no encontrado: {}", loginRequest.getEmail());
             return ResponseEntity.status(401).body(Map.of("error", "E-mail Inválido"));
         }
-
-        boolean passwordCorrect = AspNetIdentityPasswordVerifier.verifyPassword(loginRequest.getPassword(), user.getPassword());
-        System.out.println("Password verificación: " + (passwordCorrect ? "correcta" : "incorrecta"));
-
-        if (!passwordCorrect) {
+        if (!AspNetIdentityPasswordVerifier.verifyPassword(loginRequest.getPassword(), user.getPassword())) {
+            logger.warn("Contraseña inválida para usuario: {}", loginRequest.getEmail());
             return ResponseEntity.status(401).body(Map.of("error", "Contraseña Inválida"));
         }
-
-        // La línea problemática - depende de cómo está definido tu getter
-        boolean emailConfirmed = user.getEmailConfirmed(); // O user.getEmailConfirmed() según tu clase
-        System.out.println("Email confirmado: " + emailConfirmed);
-
-        if (!emailConfirmed) {
+        if (!user.getEmailConfirmed()) {
             return ResponseEntity.status(401).body(Map.of("error", "Por favor, confirma tu email antes de iniciar sesión"));
         }
 
@@ -219,20 +182,45 @@ public class UserController {
 
         Cookie cookie = new Cookie("token", token);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
         cookie.setPath("/");
         cookie.setMaxAge(86400);
+        cookie.setSecure(false); // Solo en desarrollo local
+        cookie.setDomain("localhost"); // Opcional, si tienes problemas de dominio
 
         response.addCookie(cookie);
 
         return ResponseEntity.ok("Login Exitoso");
     }
 
+    @GetMapping("/Account/Profile")
+    public ResponseEntity<?> getProfile(@CookieValue("token") String token) {
+        User user = userTokenService.getUserFromToken(token);
+        if (user == null) {
+            return ResponseEntity.status(404).body("ERROR: Ese Usuario no Existe.");
+        }
+        List<Integer> favoriteIds = user.getFavorites().stream().map(Favorite::getConstellationId).toList();
+        List<?> favoriteConstellations = constellationRepository.findByIdIn(favoriteIds);
+        List<?> userComments = commentsRepository.findByUserId(user.getId()).stream()
+                .map(c -> Map.of(
+                        "id", c.getId(),
+                        "userNick", c.getUserNick(),
+                        "constellationName", c.getConstellationName(),
+                        "comment", c.getComment(),
+                        "userId", c.getUserId(),
+                        "constellationId", c.getConstellationId()
+                )).toList();
+        // UserInfoDto dto = new UserInfoDto(user, favoriteConstellations, userComments);
+        UserInfoDto dto = new UserInfoDto(user);
+        dto.favorites = favoriteConstellations;
+        dto.comments = userComments;
+        return ResponseEntity.ok(dto);
+    }
+
     @PostMapping("/Account/Logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
         Cookie cookie = new Cookie("token", null);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(false);
         cookie.setPath("/");
         cookie.setMaxAge(0);
 
@@ -259,5 +247,42 @@ public class UserController {
         // Ahora eliminar el usuario
         userRepository.delete(user);
         return ResponseEntity.ok("Perfil Eliminado Correctamente");
+    }
+
+    private String buildConfirmationEmail(User user, String token) {
+        String confirmationLink = "http://localhost:8080/api/Auth/ConfirmEmail?userId=" + user.getId() + "&token=" + token;
+        return """
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <h2>Bienvenido a Nexus Astralis, %s!</h2>
+            <p>Gracias por registrarte. Para activar tu cuenta, por favor haz clic en el siguiente enlace:</p>
+            <p><a href="%s" style="padding: 10px 15px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 4px;">Confirmar mi cuenta</a></p>
+            <p>El enlace expirará en 24 horas.</p>
+            <p>Si no has creado esta cuenta, puedes ignorar este mensaje.</p>
+            <p>Saludos,<br>El equipo de Nexus Astralis</p>
+        </body>
+        </html>
+        """.formatted(user.getName(), confirmationLink);
+    }
+
+    public static String saveProfileImage(MultipartFile profileImageFile, String nick) throws IOException {
+        if (profileImageFile == null || profileImageFile.isEmpty()) {
+            return "/imgs/default-profile.jpg";
+        }
+
+        String uploadsDir = System.getProperty("user.dir") + "/src/main/resources/static/imgs/profile/" + nick;
+        File dir = new File(uploadsDir);
+        if (!dir.exists()) dir.mkdirs();
+
+        String extension = "";
+        String originalName = profileImageFile.getOriginalFilename();
+        int i = originalName.lastIndexOf('.');
+        if (i > 0) extension = originalName.substring(i);
+
+        String fileName = "Profile" + extension;
+        Path filePath = Paths.get(uploadsDir, fileName);
+        Files.copy(profileImageFile.getInputStream(), filePath);
+
+        return "/imgs/profile/" + nick + "/" + fileName;
     }
 }

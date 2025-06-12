@@ -1,6 +1,6 @@
 package com.futureprograms.NexusAPI.interfaces;
 
-import com.futureprograms.NexusAPI.model.User;
+import com.futureprograms.NexusAPI.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserRepository extends JpaRepository<User, String> {

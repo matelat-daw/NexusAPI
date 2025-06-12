@@ -1,7 +1,7 @@
 package com.futureprograms.NexusAPI.controllers;
 
 import com.futureprograms.NexusAPI.interfaces.UserRepository;
-import com.futureprograms.NexusAPI.model.Comment;
+import com.futureprograms.NexusAPI.models.Comment;
 import com.futureprograms.NexusAPI.interfaces.CommentsRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

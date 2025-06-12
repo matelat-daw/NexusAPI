@@ -1,6 +1,6 @@
 package com.futureprograms.NexusAPI.interfaces;
 
-import com.futureprograms.NexusAPI.model.Constellation;
+import com.futureprograms.NexusAPI.models.Constellation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.List;

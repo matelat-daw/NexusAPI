@@ -1,6 +1,6 @@
 package com.futureprograms.NexusAPI.controllers;
 
-import com.futureprograms.NexusAPI.model.Star;
+import com.futureprograms.NexusAPI.models.Star;
 import com.futureprograms.NexusAPI.interfaces.StarRepository;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;

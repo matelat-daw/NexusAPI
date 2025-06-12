@@ -1,8 +1,8 @@
 package com.futureprograms.NexusAPI.controllers;
 
-import com.futureprograms.NexusAPI.model.Favorite;
+import com.futureprograms.NexusAPI.models.Favorite;
 import com.futureprograms.NexusAPI.service.UserTokenService;
-import com.futureprograms.NexusAPI.model.User;
+import com.futureprograms.NexusAPI.models.User;
 import com.futureprograms.NexusAPI.interfaces.FavoriteRepository;
 import com.futureprograms.NexusAPI.interfaces.ConstellationRepository;
 import org.springframework.web.bind.annotation.*;
@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.stream.Collectors;
-import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/Favorites")
@@ -30,8 +29,8 @@ public class FavoritesController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getFavorites(HttpServletRequest request) {
-        User user = userTokenService.getUserFromToken(request);
+    public ResponseEntity<?> getFavorites(@CookieValue("token") String token) {
+        User user = userTokenService.getUserFromToken(token);
         if (user == null) {
             return ResponseEntity.status(404).body("ERROR: Ese Usuario no Existe.");
         }

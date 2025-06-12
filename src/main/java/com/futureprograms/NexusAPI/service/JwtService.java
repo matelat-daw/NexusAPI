@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import com.futureprograms.NexusAPI.model.User;
+import com.futureprograms.NexusAPI.models.User;
 
 @Service
 public class JwtService {

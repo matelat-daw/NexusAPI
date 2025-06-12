@@ -1,13 +1,17 @@
 
-package com.futureprograms.NexusAPI.model;
+package com.futureprograms.NexusAPI.models;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import java.util.Set;
 
 @Entity
-@Data
+@Getter
+@Setter
 @Table(name = "AspNetUsers")
 public class User {
     @Id
@@ -76,6 +80,9 @@ public class User {
 
     @Column(name = "ConcurrencyStamp", nullable = true)
     private String concurrencyStamp = java.util.UUID.randomUUID().toString();
+
+    @OneToMany(mappedBy = "user")
+    private Set<Favorite> favorites;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

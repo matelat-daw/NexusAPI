@@ -1,6 +1,6 @@
 package com.futureprograms.NexusAPI.interfaces;
 
-import com.futureprograms.NexusAPI.model.Star;
+import com.futureprograms.NexusAPI.models.Star;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
