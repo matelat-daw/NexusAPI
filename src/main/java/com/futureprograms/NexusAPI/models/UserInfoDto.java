@@ -6,6 +6,17 @@ import java.util.List;
 public class UserInfoDto {
 
     public UserInfoDto(User user) {
+        this.nick = user.getNick();
+        this.email = user.getEmail();
+        this.name = user.getName();
+        this.surname1 = user.getSurname1();
+        this.surname2 = user.getSurname2();
+        this.phoneNumber = user.getPhone();
+        this.bday = user.getBday();
+        this.userLocation = user.getUserLocation();
+        this.profileImage = user.getProfileImage();
+        this.publicProfile = user.getPublicProfile();
+        this.about = user.getAbout();
     }
 
     public String nick;

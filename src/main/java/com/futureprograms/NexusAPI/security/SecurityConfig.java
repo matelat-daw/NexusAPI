@@ -24,10 +24,21 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        /*.requestMatchers("/api/Auth/Login", "/api/Auth/Register", "/api/Auth/ConfirmEmail", "/api/Account/Logout", "/api/Stars", "/api/Constellations").permitAll()
-                        .requestMatchers("/api/public/**", "/api/Stars/**", "/api/Constellations/**", "/api/Constellations/GetStars/**").permitAll()
-                        .anyRequest().authenticated()*/
-                        .anyRequest().permitAll()
+                        .requestMatchers("/api/Auth/Login",
+                                "/api/Auth/Register",
+                                "/api/Auth/ConfirmEmail",
+                                "/api/Account/Logout",
+                                "/api/Account/Profile",
+                                "/api/Account/GetUserInfo",
+                                "/api/Account/GetComments/**",
+                                "/api/Account/Favorites/**",
+                                "/api/Account/**",
+                                "/api/Stars",
+                                "/api/Constellations",
+                                "/api/Stars/**",
+                                "/api/Constellations/**"
+                        ).permitAll()
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         return http.build();

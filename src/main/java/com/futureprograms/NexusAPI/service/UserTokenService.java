@@ -27,12 +27,12 @@ public class UserTokenService {
         return userRepository.findById(userId).orElse(null);
     }
 
-    private String getTokenFromCookie(HttpServletRequest request, String cookieName) {
+    /*private String getTokenFromCookie(HttpServletRequest request, String cookieName) {
         if (request.getCookies() == null) return null;
         return Arrays.stream(request.getCookies())
                 .filter(c -> c.getName().equals(cookieName))
                 .findFirst()
                 .map(jakarta.servlet.http.Cookie::getValue)
                 .orElse(null);
-    }
+    }*/
 }

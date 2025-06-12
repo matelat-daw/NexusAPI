@@ -185,7 +185,6 @@ public class UserController {
         cookie.setPath("/");
         cookie.setMaxAge(86400);
         cookie.setSecure(false); // Solo en desarrollo local
-        cookie.setDomain("localhost"); // Opcional, si tienes problemas de dominio
 
         response.addCookie(cookie);
 
@@ -194,10 +193,18 @@ public class UserController {
 
     @GetMapping("/Account/Profile")
     public ResponseEntity<?> getProfile(@CookieValue("token") String token) {
+        if (token == null) {
+            logger.warn("No se recibió cookie 'token' en la petición a /Account/Profile");
+            return ResponseEntity.status(404).body("ERROR: Ese Usuario no Existe.");
+        }
         User user = userTokenService.getUserFromToken(token);
         if (user == null) {
             return ResponseEntity.status(404).body("ERROR: Ese Usuario no Existe.");
         }
+        return getResponseEntity(user);
+    }
+
+    private ResponseEntity<?> getResponseEntity(User user) {
         List<Integer> favoriteIds = user.getFavorites().stream().map(Favorite::getConstellationId).toList();
         List<?> favoriteConstellations = constellationRepository.findByIdIn(favoriteIds);
         List<?> userComments = commentsRepository.findByUserId(user.getId()).stream()
@@ -209,15 +216,31 @@ public class UserController {
                         "userId", c.getUserId(),
                         "constellationId", c.getConstellationId()
                 )).toList();
-        // UserInfoDto dto = new UserInfoDto(user, favoriteConstellations, userComments);
         UserInfoDto dto = new UserInfoDto(user);
         dto.favorites = favoriteConstellations;
         dto.comments = userComments;
         return ResponseEntity.ok(dto);
     }
 
+    @GetMapping("/Account/GetUserInfo")
+    public ResponseEntity<?> getUserInfo(@RequestParam("nick") String nick, @CookieValue("token") String token) {
+        User logedUser = userTokenService.getUserFromToken(token);
+        if (logedUser == null) {
+            return ResponseEntity.status(404).body("ERROR: Ese Usuario no Existe.");
+        }
+        User user = userRepository.findByNick(nick);
+        if (user == null) {
+            return ResponseEntity.status(404).body("ERROR: Ese Usuario no Existe.");
+        }
+        return getResponseEntity(user);
+    }
+
     @PostMapping("/Account/Logout")
-    public ResponseEntity<?> logout(HttpServletResponse response) {
+    public ResponseEntity<?> logout(HttpServletResponse response, @CookieValue("token") String token) {
+        User user = userTokenService.getUserFromToken(token);
+        if (user == null) {
+            return ResponseEntity.status(404).body("ERROR: Ese Usuario no Existe.");
+        }
         Cookie cookie = new Cookie("token", null);
         cookie.setHttpOnly(true);
         cookie.setSecure(false);
@@ -276,6 +299,7 @@ public class UserController {
 
         String extension = "";
         String originalName = profileImageFile.getOriginalFilename();
+        assert originalName != null;
         int i = originalName.lastIndexOf('.');
         if (i > 0) extension = originalName.substring(i);
 
