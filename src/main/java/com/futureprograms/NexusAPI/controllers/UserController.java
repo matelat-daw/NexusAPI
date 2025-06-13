@@ -183,13 +183,7 @@ public class UserController {
         }
         String token = jwtService.generateToken(user, roles);
 
-        Cookie cookie = new Cookie("token", token);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(86400);
-        cookie.setSecure(false); // Solo en desarrollo local
-
-        response.addCookie(cookie);
+        addTokenCookie(token, response);
 
         return ResponseEntity.ok("Login Exitoso");
     }
@@ -217,13 +211,7 @@ public class UserController {
 
             String localToken = jwtService.generateToken(user, user.getRoles().stream().map(Role::getName).toList());
 
-            Cookie cookie = new Cookie("token", localToken);
-            cookie.setHttpOnly(true);
-            cookie.setPath("/");
-            cookie.setMaxAge(86400);
-            cookie.setSecure(false); // Cambia a true en producción con HTTPS
-
-            response.addCookie(cookie);
+            addTokenCookie(localToken, response);
 
             return ResponseEntity.ok(localToken);
         } catch (Exception ex) {
@@ -348,5 +336,14 @@ public class UserController {
         Files.copy(profileImageFile.getInputStream(), filePath);
 
         return "/imgs/profile/" + nick + "/" + fileName;
+    }
+
+    private void addTokenCookie(String token, HttpServletResponse response) {
+        Cookie cookie = new Cookie("token", token);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(86400);
+        cookie.setSecure(false); // Cambia a true en producción con HTTPS
+        response.addCookie(cookie);
     }
 }
