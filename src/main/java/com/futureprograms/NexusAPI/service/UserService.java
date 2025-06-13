@@ -27,7 +27,6 @@ public class UserService {
         userRepository.save(user);
     }
 
-    // UserService.java
     public User verifyUser(String email, String name, String picture) {
         User user = userRepository.findByEmail(email);
         if (user != null) return user;
@@ -40,6 +39,7 @@ public class UserService {
         }
 
         user = new User();
+        user.setId(UUID.randomUUID().toString());
         user.setNick(nick);
         user.setEmail(email);
         user.setName(name);

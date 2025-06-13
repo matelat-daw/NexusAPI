@@ -33,7 +33,6 @@ import java.nio.file.Paths;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class UserController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -211,7 +210,7 @@ public class UserController {
 
             GoogleIdToken.Payload payload = idToken.getPayload();
             User user = userService.verifyUser(
-                    (String) payload.getEmail(),
+                    payload.getEmail(),
                     (String) payload.get("name"),
                     (String) payload.get("picture")
             );
