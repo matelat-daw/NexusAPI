@@ -10,6 +10,11 @@ import com.futureprograms.NexusAPI.service.UserService;
 import com.futureprograms.NexusAPI.service.UserTokenService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -19,7 +24,6 @@ import java.time.LocalDate;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -40,6 +44,7 @@ public class UserController {
     private final JwtService jwtService;
     private final EmailSenderService emailSender;
     private final EmailConfirmationRepository emailConfirmationRepository;
+    private final String googleClientId = "1071917637623-020l5qbcihpj4u7tdv411cov4cfh530c.apps.googleusercontent.com";
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
@@ -189,6 +194,41 @@ public class UserController {
         response.addCookie(cookie);
 
         return ResponseEntity.ok("Login Exitoso");
+    }
+
+    @PostMapping("/Auth/GoogleLogin")
+    public ResponseEntity<?> googleLogin(@RequestBody ExternalLoginRequest request) {
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier
+                    .Builder(new NetHttpTransport(), new GsonFactory())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(request.getToken());
+            if (idToken == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Token inválido"));
+            }
+
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            User user = userService.verifyUser(
+                    (String) payload.getEmail(),
+                    (String) payload.get("name"),
+                    (String) payload.get("picture")
+            );
+
+            String localToken = jwtService.generateToken(user, user.getRoles().stream().map(Role::getName).toList());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Inicio de Sesión Exitoso",
+                    "token", localToken,
+                    "nick", user.getNick(),
+                    "email", user.getEmail(),
+                    "name", user.getName(),
+                    "profileImage", user.getProfileImage()
+            ));
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Token inválido", "error", ex.getMessage()));
+        }
     }
 
     @GetMapping("/Account/Profile")

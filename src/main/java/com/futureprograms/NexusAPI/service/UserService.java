@@ -27,6 +27,39 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // UserService.java
+    public User verifyUser(String email, String name, String picture) {
+        User user = userRepository.findByEmail(email);
+        if (user != null) return user;
+
+        String baseNick = email.split("@")[0];
+        String nick = baseNick;
+        int counter = 1;
+        while (userRepository.existsByNick(nick)) {
+            nick = baseNick + counter++;
+        }
+
+        user = new User();
+        user.setNick(nick);
+        user.setEmail(email);
+        user.setName(name);
+        user.setSurname1("");
+        user.setPhone("");
+        user.setEmailConfirmed(true);
+        user.setProfileImage(picture);
+        user.setPublicProfile(false);
+
+        // Asignar rol "Basic"
+        Role basicRole = roleRepository.findByName("Basic");
+        if (basicRole != null) {
+            user.setRoles(Set.of(basicRole));
+        }
+
+        // Guardar usuario
+        userRepository.save(user);
+        return user;
+    }
+
     public User createUserFromRegisterRequest(RegisterRequest model) {
         User user = new User();
         user.setId(UUID.randomUUID().toString());
