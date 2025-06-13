@@ -218,14 +218,7 @@ public class UserController {
 
             String localToken = jwtService.generateToken(user, user.getRoles().stream().map(Role::getName).toList());
 
-            return ResponseEntity.ok(Map.of(
-                    "message", "Inicio de Sesión Exitoso",
-                    "token", localToken,
-                    "nick", user.getNick(),
-                    "email", user.getEmail(),
-                    "name", user.getName(),
-                    "profileImage", user.getProfileImage()
-            ));
+            return ResponseEntity.ok(localToken);
         } catch (Exception ex) {
             return ResponseEntity.badRequest().body(Map.of("message", "Token inválido", "error", ex.getMessage()));
         }
