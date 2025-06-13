@@ -44,6 +44,7 @@ public class UserService {
         user.setEmail(email);
         user.setName(name);
         user.setSurname1("");
+        user.setBday(LocalDate.of(1970,1,1)); // Fecha por defecto
         user.setPhone("");
         user.setEmailConfirmed(true);
         user.setProfileImage(picture);
