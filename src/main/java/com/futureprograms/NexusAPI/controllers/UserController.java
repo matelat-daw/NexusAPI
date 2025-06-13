@@ -44,7 +44,6 @@ public class UserController {
     private final JwtService jwtService;
     private final EmailSenderService emailSender;
     private final EmailConfirmationRepository emailConfirmationRepository;
-    private final String googleClientId = "1071917637623-020l5qbcihpj4u7tdv411cov4cfh530c.apps.googleusercontent.com";
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
@@ -197,8 +196,9 @@ public class UserController {
     }
 
     @PostMapping("/Auth/GoogleLogin")
-    public ResponseEntity<?> googleLogin(@RequestBody ExternalLoginRequest request) {
+    public ResponseEntity<?> googleLogin(@RequestBody ExternalLoginRequest request, HttpServletResponse response) {
         try {
+            String googleClientId = "1071917637623-020l5qbcihpj4u7tdv411cov4cfh530c.apps.googleusercontent.com";
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier
                     .Builder(new NetHttpTransport(), new GsonFactory())
                     .setAudience(Collections.singletonList(googleClientId))
@@ -217,6 +217,14 @@ public class UserController {
             );
 
             String localToken = jwtService.generateToken(user, user.getRoles().stream().map(Role::getName).toList());
+
+            Cookie cookie = new Cookie("token", localToken);
+            cookie.setHttpOnly(true);
+            cookie.setPath("/");
+            cookie.setMaxAge(86400);
+            cookie.setSecure(false); // Cambia a true en producción con HTTPS
+
+            response.addCookie(cookie);
 
             return ResponseEntity.ok(localToken);
         } catch (Exception ex) {
