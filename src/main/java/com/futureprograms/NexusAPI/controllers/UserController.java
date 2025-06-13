@@ -339,11 +339,10 @@ public class UserController {
     }
 
     private void addTokenCookie(String token, HttpServletResponse response) {
-        Cookie cookie = new Cookie("token", token);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(86400);
-        cookie.setSecure(false); // Cambia a true en producción con HTTPS
-        response.addCookie(cookie);
+        String cookieValue = String.format(
+                "token=%s; Max-Age=86400; Path=/; Secure; HttpOnly; SameSite=None; Domain=nexus-astralis.up.railway.app",
+                token
+        );
+        response.addHeader("Set-Cookie", cookieValue);
     }
 }
