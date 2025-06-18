@@ -151,8 +151,8 @@ public class UserController {
     }
 
     @GetMapping("/Account/GetUsers")
-    public ResponseEntity<List<User>> getUsers() {
-        return ResponseEntity.ok(userRepository.findAll());
+    public ResponseEntity<List<UserBasicDto>> getUsers() {
+        return ResponseEntity.ok(userRepository.findAllBasicUsers());
     }
 
     @PostMapping("/Auth/Login")
