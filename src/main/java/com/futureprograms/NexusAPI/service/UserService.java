@@ -81,7 +81,7 @@ public class UserService {
         user.setBday(model.getBday() != null ? model.getBday() : LocalDate.now());
         user.setAbout(nullIfEmpty(model.getAbout()));
         user.setUserLocation(nullIfEmpty(model.getUserLocation()));
-        user.setPublicProfile(false);
+        user.setPublicProfile(model.getPublicProfile() != null && model.getPublicProfile().equals("1"));
         user.setEmailConfirmed(false);
         try {
             user.setPassword(AspNetIdentityPasswordVerifier.hashPassword(model.getPassword()));
