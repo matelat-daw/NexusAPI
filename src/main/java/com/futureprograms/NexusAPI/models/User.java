@@ -82,9 +82,11 @@ public class User {
     private String concurrencyStamp = java.util.UUID.randomUUID().toString();
 
     @OneToMany(mappedBy = "user")
+    @JsonIgnore
     private Set<Favorite> favorites;
 
     @ManyToMany(fetch = FetchType.LAZY)
+    @JsonIgnore
     @JoinTable(
             name = "AspNetUserRoles",
             joinColumns = @JoinColumn(name = "UserId"),
