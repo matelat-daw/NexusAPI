@@ -253,7 +253,6 @@ public class UserController {
         return getResponseEntity(user);
     }
 
-    @SuppressWarnings("unchecked")
     private ResponseEntity<?> getResponseEntity(User user) {
         List<Integer> favoriteIds = user.getFavorites().stream().map(Favorite::getConstellationId).toList();
         List<?> favoriteConstellations = constellationRepository.findByIdIn(favoriteIds);
