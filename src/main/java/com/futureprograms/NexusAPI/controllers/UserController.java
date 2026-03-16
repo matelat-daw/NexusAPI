@@ -158,7 +158,7 @@ public class UserController {
                 }
             }
             if (req.getPublicProfile() != null && !req.getPublicProfile().isEmpty())
-                user.setPublicProfile(Boolean.valueOf("1".equals(req.getPublicProfile())));
+                user.setPublicProfile("1".equals(req.getPublicProfile()));
             if (req.getAbout() != null && !req.getAbout().isEmpty()) user.setAbout(req.getAbout());
 
             userRepository.save(user);
@@ -253,6 +253,7 @@ public class UserController {
         return getResponseEntity(user);
     }
 
+    @SuppressWarnings("unchecked")
     private ResponseEntity<?> getResponseEntity(User user) {
         List<Integer> favoriteIds = user.getFavorites().stream().map(Favorite::getConstellationId).toList();
         List<?> favoriteConstellations = constellationRepository.findByIdIn(favoriteIds);
