@@ -12,11 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class UpdateProfileRequest {
     
     @Size(min = 3, max = 50, message = "Nick must be between 3 and 50 characters")
-<<<<<<< HEAD
     @Pattern(regexp = "^[a-zA-Z0-9_@.-]*$", message = "Nick can only contain letters, numbers, underscore, hyphen, @, . and -")
-=======
-    @Pattern(regexp = "^[a-zA-Z0-9_-]*$", message = "Nick can only contain letters, numbers, underscore and hyphen")
->>>>>>> 26bc98d4b16734f48864937a17ad6d5ddec23a28
     private String nick;
     
     @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
