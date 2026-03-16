@@ -52,7 +52,6 @@ public class CommentsController {
         }
 
         List<Comment> userComments = commentsRepository.findByUserId(id);
-        // Si quieres devolver solo ciertos campos, puedes mapearlos a un DTO:
         List<Map<String, Object>> result = userComments.stream().map(c -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", c.getId());

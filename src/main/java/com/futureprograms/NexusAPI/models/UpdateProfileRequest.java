@@ -6,49 +6,40 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDate;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterRequest {
+public class UpdateProfileRequest {
     
-    @NotBlank(message = "Nick is required")
     @Size(min = 3, max = 50, message = "Nick must be between 3 and 50 characters")
-    @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "Nick can only contain letters, numbers, underscore and hyphen")
+    @Pattern(regexp = "^[a-zA-Z0-9_@.-]*$", message = "Nick can only contain letters, numbers, underscore, hyphen, @, . and -")
     private String nick;
     
-    @NotBlank(message = "Name is required")
     @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
     private String name;
     
-    @NotBlank(message = "First surname is required")
     @Size(min = 2, max = 100, message = "First surname must be between 2 and 100 characters")
     private String surname1;
     
     @Size(max = 100, message = "Second surname must not exceed 100 characters")
     private String surname2;
     
-    @NotBlank(message = "Email is required")
     @Email(message = "Email should be valid")
     private String email;
     
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, max = 128, message = "Password must be between 8 and 128 characters")
-    private String password;
-    
-    @Pattern(regexp = "^(\\+?[1-9]\\d{1,14})?$", message = "Phone number format invalid")
+    // Teléfono es opcional
     private String phoneNumber;
     
-    @PastOrPresent(message = "Birthday must be in the past or present")
-    private LocalDate bday;
+    // Aceptar fecha como String para mayor flexibilidad (opcional)
+    private String bday;
     
     @Size(max = 200, message = "User location must not exceed 200 characters")
     private String userLocation;
     
+    // Imagen de perfil es completamente opcional
     private MultipartFile profileImage;
     
-    @Pattern(regexp = "^[01]?$", message = "Public profile must be 0 or 1")
+    // Perfil público (opcional)
     private String publicProfile;
     
     @Size(max = 1000, message = "About must not exceed 1000 characters")

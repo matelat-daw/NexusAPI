@@ -11,6 +11,12 @@ public class UserBasicDto {
     public String profileImage;
     public boolean emailConfirmed;
 
+    public UserBasicDto(String id, String nick, String profileImage) {
+        this.id = id;
+        this.nick = nick;
+        this.profileImage = profileImage;
+    }
+
     public UserBasicDto(String id, String email, String nick, String name, String surname1, String surname2, String phone, String profileImage, boolean emailConfirmed) {
         this.id = id;
         this.email = email;

@@ -1,38 +1,37 @@
 package com.futureprograms.NexusAPI.config;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 
 @Data
 @Builder
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@NoArgsConstructor
+@AllArgsConstructor
 public class ApiResponse<T> {
-    private T data;
     private String message;
-    private boolean success;
+    private T data;
+    private int status;
     private LocalDateTime timestamp;
-    private Integer statusCode;
 
     public static <T> ApiResponse<T> success(T data, String message) {
         return ApiResponse.<T>builder()
-                .data(data)
                 .message(message)
-                .success(true)
+                .data(data)
+                .status(HttpStatus.OK.value())
                 .timestamp(LocalDateTime.now())
-                .statusCode(200)
                 .build();
     }
 
-    public static <T> ApiResponse<T> error(String message, Integer statusCode) {
+    public static <T> ApiResponse<T> error(String message, HttpStatus status) {
         return ApiResponse.<T>builder()
                 .message(message)
-                .success(false)
+                .status(status.value())
                 .timestamp(LocalDateTime.now())
-                .statusCode(statusCode)
                 .build();
     }
 }
-

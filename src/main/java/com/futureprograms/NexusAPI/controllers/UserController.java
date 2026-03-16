@@ -5,9 +5,9 @@ import com.futureprograms.NexusAPI.models.*;
 import com.futureprograms.NexusAPI.security.AspNetIdentityPasswordVerifier;
 import com.futureprograms.NexusAPI.service.JwtService;
 import com.futureprograms.NexusAPI.service.EmailSenderService;
-import com.futureprograms.NexusAPI.models.EmailConfirmation;
 import com.futureprograms.NexusAPI.service.UserService;
 import com.futureprograms.NexusAPI.service.UserTokenService;
+import com.futureprograms.NexusAPI.utils.DateConverter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,10 +20,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import java.time.LocalDateTime;
-import java.time.LocalDate;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import net.coobird.thumbnailator.Thumbnails;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -32,6 +34,7 @@ import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @RequiredArgsConstructor
 public class UserController {
     private final UserRepository userRepository;
@@ -95,59 +98,82 @@ public class UserController {
             return ResponseEntity.badRequest().body("El token ha expirado");
         }
 
-        user.setEmailConfirmed(true);
+        user.setEmailConfirmed(Boolean.TRUE);
         userRepository.save(user);
         emailConfirmationRepository.delete(confirmation);
 
         return ResponseEntity.ok("¡Email confirmado correctamente! Ya puedes iniciar sesión.");
     }
 
-    @PatchMapping("/Account/Update")
-    public ResponseEntity<?> update(@Valid @ModelAttribute RegisterRequest req, @CookieValue("token") String token) {
-        User user = userTokenService.getUserFromToken(token);
-        if (user == null) {
-            return ResponseEntity.status(404).body(Map.of("error", "Usuario no encontrado"));
-        }
+    @PostMapping(value = "/Account/Update", consumes = {"multipart/form-data"})
+    public ResponseEntity<?> update(@Valid @ModelAttribute UpdateProfileRequest req, @CookieValue(value = "token", required = false) String token) {
+        logger.info("Inicio de petición POST a /Account/Update");
+        try {
+            if (token == null || token.isEmpty()) {
+                logger.warn("Petición sin token");
+                return ResponseEntity.status(401).body(Map.of("error", "Token no proporcionado"));
+            }
+            User user = userTokenService.getUserFromToken(token);
+            if (user == null) {
+                logger.warn("Usuario no encontrado para el token proporcionado");
+                return ResponseEntity.status(401).body(Map.of("error", "Usuario no encontrado o sesión expirada"));
+            }
 
-        if (req.getNick() != null && !req.getNick().equals(user.getNick())) {
-            if (userRepository.existsByNick(req.getNick())) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Nick ya registrado"));
-            }
-            user.setNick(req.getNick());
-        }
-        if (req.getEmail() != null && !req.getEmail().equals(user.getEmail())) {
-            if (userRepository.findByEmail(req.getEmail()) != null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Email ya registrado"));
-            }
-            user.setEmail(req.getEmail());
-        }
+            logger.info("Actualizando perfil para el usuario: {} (ID: {})", user.getNick(), user.getId());
 
-        if (req.getName() != null) user.setName(req.getName());
-        if (req.getSurname1() != null) user.setSurname1(req.getSurname1());
-        if (req.getSurname2() != null) user.setSurname2(req.getSurname2());
-        if (req.getPhoneNumber() != null) user.setPhone(req.getPhoneNumber());
-        if (req.getBday() != null) {
-            try {
-                user.setBday(LocalDate.parse(req.getBday().toString())); // espera formato yyyy-MM-dd
-            } catch (Exception e) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Formato de fecha inválido (usa yyyy-MM-dd)"));
+            // Actualización de campos...
+            if (req.getNick() != null && !req.getNick().trim().isEmpty() && !req.getNick().equals(user.getNick())) {
+                if (userRepository.existsByNick(req.getNick())) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Nick ya registrado"));
+                }
+                user.setNick(req.getNick());
             }
-        }
-        if (req.getUserLocation() != null) user.setUserLocation(req.getUserLocation());
-        if (req.getProfileImage() != null && !req.getProfileImage().isEmpty()) {
-            try {
-                String imagePath = saveProfileImage(req.getProfileImage(), user.getNick());
-                user.setProfileImage(imagePath);
-            } catch (IOException e) {
-                return ResponseEntity.status(500).body(Map.of("error", "Error al guardar la imagen de perfil"));
-            }
-        }
-        if (req.getPublicProfile() != null)
-            user.setPublicProfile("1".equals(req.getPublicProfile()));
-        if (req.getAbout() != null) user.setAbout(req.getAbout());
 
-        userRepository.save(user);
-        return ResponseEntity.ok("Perfil actualizado correctamente");
+            if (req.getEmail() != null && !req.getEmail().trim().isEmpty() && !req.getEmail().equals(user.getEmail())) {
+                if (userRepository.findByEmail(req.getEmail()) != null) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Email ya registrado"));
+                }
+                user.setEmail(req.getEmail());
+            }
+
+            if (req.getName() != null) user.setName(req.getName());
+            if (req.getSurname1() != null) user.setSurname1(req.getSurname1());
+            if (req.getSurname2() != null) user.setSurname2(req.getSurname2());
+            if (req.getPhoneNumber() != null) user.setPhone(req.getPhoneNumber());
+            
+            if (req.getBday() != null && !req.getBday().isEmpty()) {
+                try {
+                    user.setBday(DateConverter.convertToLocalDate(req.getBday()));
+                } catch (Exception e) {
+                    logger.warn("Error al convertir fecha: {}", req.getBday());
+                }
+            }
+            
+            if (req.getUserLocation() != null) user.setUserLocation(req.getUserLocation());
+            
+            if (req.getProfileImage() != null && !req.getProfileImage().isEmpty()) {
+                logger.info("Nueva imagen recibida: {} ({} bytes)", req.getProfileImage().getOriginalFilename(), req.getProfileImage().getSize());
+                try {
+                    String imagePath = saveProfileImage(req.getProfileImage(), user.getNick());
+                    user.setProfileImage(imagePath);
+                } catch (Exception e) {
+                    logger.error("Error crítico al procesar imagen", e);
+                    return ResponseEntity.status(500).body(Map.of("error", "Error interno al procesar la imagen"));
+                }
+            }
+            
+            if (req.getPublicProfile() != null) {
+                user.setPublicProfile("1".equals(req.getPublicProfile()));
+            }
+            if (req.getAbout() != null) user.setAbout(req.getAbout());
+
+            userRepository.save(user);
+            logger.info("Perfil actualizado con éxito para: {}", user.getNick());
+            return ResponseEntity.ok("Datos Actualizados.");
+        } catch (Exception e) {
+            logger.error("Error inesperado al actualizar perfil", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Error al actualizar perfil: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/Account/GetUsers")
@@ -185,7 +211,7 @@ public class UserController {
 
         addTokenCookie(token, response);
 
-        return ResponseEntity.ok("Login Exitoso");
+        return ResponseEntity.ok(Map.of("token", token, "message", "Login Exitoso"));
     }
 
     @PostMapping("/Auth/GoogleLogin")
@@ -213,21 +239,22 @@ public class UserController {
 
             addTokenCookie(localToken, response);
 
-            return ResponseEntity.ok(localToken);
+            return ResponseEntity.ok(Map.of("token", localToken, "message", "Google Login Exitoso"));
         } catch (Exception ex) {
             return ResponseEntity.badRequest().body(Map.of("message", "Token inválido", "error", ex.getMessage()));
         }
     }
 
     @GetMapping("/Account/Profile")
-    public ResponseEntity<?> getProfile(@CookieValue("token") String token) {
-        if (token == null) {
-            logger.warn("No se recibió cookie 'token' en la petición a /Account/Profile");
-            return ResponseEntity.status(404).body("ERROR: Ese Usuario no Existe.");
+    public ResponseEntity<?> getProfile(@CookieValue(value = "token", required = false) String token) {
+        if (token == null || token.isEmpty()) {
+            logger.warn("No se recibió cookieToken en la petición a /Account/Profile");
+            return ResponseEntity.status(401).body(Map.of("error", "Token no encontrado. Por favor inicia sesión."));
         }
         User user = userTokenService.getUserFromToken(token);
         if (user == null) {
-            return ResponseEntity.status(404).body("ERROR: Ese Usuario no Existe.");
+            logger.warn("Token inválido o usuario no encontrado");
+            return ResponseEntity.status(401).body(Map.of("error", "Token inválido o expirado. Por favor inicia sesión nuevamente."));
         }
         return getResponseEntity(user);
     }
@@ -254,7 +281,7 @@ public class UserController {
     public ResponseEntity<?> getUserInfo(@RequestParam("nick") String nick, @CookieValue("token") String token) {
         User logedUser = userTokenService.getUserFromToken(token);
         if (logedUser == null) {
-            return ResponseEntity.status(404).body("ERROR: Ese Usuario no Existe.");
+            return ResponseEntity.status(404).body("ERROR: Esa Sesión no es válida.");
         }
         User user = userRepository.findByNick(nick);
         if (user == null) {
@@ -264,20 +291,24 @@ public class UserController {
     }
 
     @PostMapping("/Account/Logout")
-    public ResponseEntity<?> logout(HttpServletResponse response, @CookieValue("token") String token) {
-        User user = userTokenService.getUserFromToken(token);
-        if (user == null) {
-            return ResponseEntity.status(404).body("ERROR: Ese Usuario no Existe.");
+    public ResponseEntity<?> logout(HttpServletResponse response, @CookieValue(value = "token", required = false) String token) {
+        if (token != null) {
+            User user = userTokenService.getUserFromToken(token);
+            if (user == null) {
+                return ResponseEntity.status(404).body(Map.of("error", "Usuario no encontrado"));
+            }
         }
+        
+        // Limpiar la cookie del token
         Cookie cookie = new Cookie("token", null);
         cookie.setHttpOnly(true);
         cookie.setSecure(false);
         cookie.setPath("/");
-        cookie.setMaxAge(0);
-
+        cookie.setMaxAge(0);  // MaxAge=0 elimina la cookie
+        
         response.addCookie(cookie);
 
-        return ResponseEntity.ok("Logout Exitoso");
+        return ResponseEntity.ok(Map.of("message", "Logout Exitoso"));
     }
 
     @DeleteMapping("/Account/Delete")
@@ -321,28 +352,64 @@ public class UserController {
             return "/imgs/default-profile.jpg";
         }
 
-        String uploadsDir = System.getProperty("user.dir") + "/src/main/resources/static/imgs/profile/" + nick;
-        File dir = new File(uploadsDir);
-        if (!dir.exists()) dir.mkdirs();
+        try {
+            logger.info("Iniciando guardado de imagen para nick: {}", nick);
+            String projectDir = System.getProperty("user.dir");
+            if (!projectDir.endsWith("NexusAPI") && new File(projectDir, "NexusAPI").exists()) {
+                projectDir = projectDir + File.separator + "NexusAPI";
+            }
+            logger.info("Directorio base del proyecto: {}", projectDir);
+            
+            String uploadsDir = projectDir + File.separator + "src" + File.separator + "main" + File.separator + "resources" + File.separator + "static" + File.separator + "imgs" + File.separator + "profile" + File.separator + nick;
+            logger.info("Directorio de destino: {}", uploadsDir);
+            
+            File dir = new File(uploadsDir);
+            if (!dir.exists()) {
+                if (!dir.mkdirs()) {
+                    logger.warn("No se pudo crear el directorio en src, usando fallback temporal");
+                    uploadsDir = System.getProperty("java.io.tmpdir") + File.separator + "nexus-profiles" + File.separator + nick;
+                    dir = new File(uploadsDir);
+                    dir.mkdirs();
+                }
+            }
 
-        String extension = "";
-        String originalName = profileImageFile.getOriginalFilename();
-        assert originalName != null;
-        int i = originalName.lastIndexOf('.');
-        if (i > 0) extension = originalName.substring(i);
-
-        String fileName = "Profile" + extension;
-        Path filePath = Paths.get(uploadsDir, fileName);
-        Files.copy(profileImageFile.getInputStream(), filePath);
-
-        return "/imgs/profile/" + nick + "/" + fileName;
+            String fileName = "profile.jpg";
+            Path filePath = Paths.get(uploadsDir, fileName);
+            logger.info("Ruta final del archivo: {}", filePath.toAbsolutePath());
+            
+            // Eliminar archivo si existe para asegurar el reemplazo
+            Files.deleteIfExists(filePath);
+            
+            // Optimizar imagen: Redimensionar a 400x400 y comprimir (calidad 0.8)
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            Thumbnails.of(profileImageFile.getInputStream())
+                    .size(400, 400)
+                    .outputFormat("jpg")
+                    .outputQuality(0.8)
+                    .toOutputStream(outputStream);
+            
+            Files.copy(new ByteArrayInputStream(outputStream.toByteArray()), filePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            
+            logger.info("Imagen guardada y optimizada con éxito.");
+            return "/imgs/profile/" + nick + "/profile.jpg";
+        } catch (IOException e) {
+            logger.error("Error al guardar imagen de perfil: " + e.getMessage(), e);
+            throw e;
+        }
     }
 
     private void addTokenCookie(String token, HttpServletResponse response) {
-        String cookieValue = String.format(
-                "token=%s; Max-Age=86400; Path=/; Secure; HttpOnly; SameSite=None; Domain=nexus-astralis.up.railway.app",
-                token
-        );
-        response.addHeader("Set-Cookie", cookieValue);
+        // Crear cookie con el JWT token
+        Cookie cookie = new Cookie("token", token);
+        cookie.setHttpOnly(true);      // No accesible desde JavaScript
+        cookie.setSecure(false);        // http en desarrollo, true en producción
+        cookie.setPath("/");            // Disponible en toda la aplicación
+        cookie.setMaxAge(86400);        // 24 horas
+        cookie.setAttribute("SameSite", "Lax"); // CSRF protection
+        
+        response.addCookie(cookie);
+        
+        // Log para verificar que se está enviando la cookie
+        logger.info("Cookie JWT enviada: token set-cookie");
     }
 }

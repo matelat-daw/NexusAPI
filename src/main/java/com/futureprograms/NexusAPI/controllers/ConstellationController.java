@@ -4,6 +4,7 @@ import com.futureprograms.NexusAPI.models.Constellation;
 import com.futureprograms.NexusAPI.interfaces.ConstellationRepository;
 import com.futureprograms.NexusAPI.models.Star;
 import com.futureprograms.NexusAPI.models.StarDTO;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,21 +26,17 @@ public class ConstellationController {
     }
 
     @GetMapping
+    @Cacheable("constellations")
     public List<Constellation> getAll() {
         return constellationRepository.findAll();
     }
 
     @GetMapping("/{id}")
-    public Optional<Constellation> getById(@PathVariable Integer id) {
-        return constellationRepository.findById(id);
-    }
-
-    /*@GetMapping("/GetStars/{id}")
-    public List<Star> getStars(@PathVariable Integer id) {
+    public ResponseEntity<Constellation> getById(@PathVariable Integer id) {
         return constellationRepository.findById(id)
-                .map(constellation -> List.copyOf(constellation.getStars()))
-                .orElse(List.of());
-    }*/
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 
     @GetMapping("/GetStars/{id}")
     public ResponseEntity<?> getStars(@PathVariable Integer id) {
@@ -49,7 +46,6 @@ public class ConstellationController {
                     .body("Esa Constelación no Existe.");
         }
 
-        // Si quieres devolver un DTO personalizado de estrellas, crea una clase StarDTO y haz el mapeo aquí.
         Set<Star> stars = new HashSet<>(constellation.get().getStars());
 
         List<StarDTO> dtoList = stars.stream()
@@ -68,11 +64,7 @@ public class ConstellationController {
                 ))
                 .toList();
 
-
-
-        // Si solo necesitas los datos actuales de Star:
         return ResponseEntity.ok(dtoList);
-
     }
 
     @PostMapping

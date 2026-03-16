@@ -7,7 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import org.springframework.web.multipart.MultipartFile;
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @Aspect
 @Component
@@ -22,7 +24,13 @@ public class LoggingAspect {
         Object[] args = joinPoint.getArgs();
 
         long startTime = System.currentTimeMillis();
-        logger.debug("Executing {}.{} with args: {}", className, methodName, Arrays.toString(args));
+        
+        // Evitar loguear archivos binarios MultipartFile
+        String argsString = Arrays.stream(args)
+            .map(arg -> (arg instanceof MultipartFile) ? "[FILE: " + ((MultipartFile) arg).getOriginalFilename() + "]" : String.valueOf(arg))
+            .collect(Collectors.joining(", "));
+            
+        logger.debug("Executing {}.{} with args: {}", className, methodName, argsString);
 
         try {
             Object result = joinPoint.proceed();
