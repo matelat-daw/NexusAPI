@@ -28,7 +28,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/Auth/Login",
+                        .requestMatchers("/api/",
+                                "/api/Auth/Login",
                                 "/api/Auth/Register",
                                 "/api/Auth/ConfirmEmail",
                                 "/api/Auth/GoogleLogin",
